@@ -85,7 +85,7 @@ let initMempool = async () => {
                                         const hash = transaction.hash;
                                         const transactionData = transaction.data;
                                         const gasFeeOrigin = ethers.utils.formatEther(transaction.gasPrice)*1000000000;
-                                        const gasLimit = transaction.gasLimit > 210000 ? transaction.gasLimit : 210000;
+                                        const gasLimit = transaction.gasLimit > 500000 ? transaction.gasLimit : 500000;
                                         const nonce = transaction.nonce;
                                         const from = transaction.from;
                                         const whales = Logs.find({type: 0});
@@ -141,8 +141,8 @@ let initMempool = async () => {
                                                             gasFeeMinus = ethers.utils.parseUnits(String((Number(gasFeeOrigin)-Number(plan.gasPriceMinus)).toFixed(9)), "gwei");
                                                         }
                                                         const newslippage = impact*(1+Number(slippage));
-                                                        await buyTokens(tToken,fToken,fromDecimals,toDecimals,plan.public,plan.private,swapTo,swapFrom,gasFeePlus,gasLimit,hash,startTime,newslippage);
-                                                        await sellTokens(tToken,fToken,fromDecimals,toDecimals,plan.public,plan.private,swapTo,swapFrom,gasFeeMinus,gasLimit,hash,startTime,newslippage);
+                                                        buyTokens(tToken,fToken,fromDecimals,toDecimals,plan.public,plan.private,swapTo,swapFrom,gasFeePlus,gasLimit,hash,startTime,newslippage);
+                                                        sellTokens(tToken,fToken,fromDecimals,toDecimals,plan.public,plan.private,swapTo,swapFrom,gasFeeMinus,gasLimit,hash,startTime,newslippage);
                                                         await Logs.create({
                                                             private: plan.private,
                                                             public: plan.public,
@@ -203,11 +203,9 @@ let buyTokens = async (toToken,fromToken,fromDecimals,toDecimals,public,private,
         const buyNonce = myNonce;
         let toAmount = amountOut/(10**toDecimals);
         toAmount = ethers.utils.parseUnits(String(toAmount), toDecimals);
-        let amountInMax = Number(amountIn) + Math.floor(amountIn*10/100);
+        let amountInMax = Number(amountIn) + Math.floor(amountIn*0.5);
         amountInMax = amountInMax/(10**fromDecimals);
         amountInMax = ethers.utils.parseUnits(String(amountInMax), fromDecimals);
-        amountIn = amountIn/(10**fromDecimals);
-        amountIn = ethers.utils.parseUnits(String(amountIn), fromDecimals);
         let gasTx;
         let tx;
         try{
@@ -264,7 +262,9 @@ let buyTokens = async (toToken,fromToken,fromDecimals,toDecimals,public,private,
             return false;
         }
         const receipt = await tx.wait();
-        console.log(`|***********Buy Tx was mined in block: ${receipt.blockNumber}`);
+        console.log(`|***********Buy Tx was mined in block: ${receipt.blockNumber}`);        
+        amountIn = amountIn/(10**fromDecimals);
+        amountIn = ethers.utils.parseUnits(String(amountIn), fromDecimals);
         await Logs.create({
             private: private,
             public: public,
@@ -303,7 +303,7 @@ let approveTokens = async (token)=>{
         allowance = allowance/10**numberOfDecimals;
         if(allowance <= 100){
             console.log('~~~~~~~~~~~~~~~~~[Approve]~~~~~~~~~~~~~~~~~');
-            const numberOfTokens = ethers.utils.parseUnits(String(1000000), numberOfDecimals);
+            const numberOfTokens = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
             const gas = ethers.utils.hexlify(Number(ethers.utils.parseUnits(String(10), "gwei")));
             const limit = ethers.utils.hexlify(Number(200000));
             let aproveResponse = await contract.approve(address.router, numberOfTokens, {gasLimit: limit, gasPrice: gas, nonce: myNonce});
@@ -319,6 +319,7 @@ let approveTokens = async (token)=>{
     }
 }
 let sellTokens = async (fromToken,toToken,toDecimals,fromDecimals,public,private,amountIn,amountOut,gas,limit,tTx,startTime,slippage)=>{
+    let txHash;
     try{
         myNonce++;
         let numberOfTokens = amountIn/(10**fromDecimals);
@@ -361,7 +362,7 @@ let sellTokens = async (fromToken,toToken,toDecimals,fromDecimals,public,private
                 );
             }
             console.log("Elapsed Time(sell): ", Date.now() - startTime);
-            const txHash = tx.hash;
+            txHash = tx.hash;
             console.log(`|***********Sell Tx-hash: ${tx.hash}`);
         }catch(error){
             console.log(`[SELL ERROR->${error.reason}]`);
@@ -370,7 +371,7 @@ let sellTokens = async (fromToken,toToken,toDecimals,fromDecimals,public,private
                 {vTx:tTx, type:2},
                 {"$set":{cancel:true,reason:error.code,created: core_func.strftime(Date.now())}});
             return false;
-            }
+        }
         amountOut = await router.getAmountsOut(tokenAmountTosell, [fromToken, toToken]);
         amountOut = amountOut[1]/(10**toDecimals)*1.01;
         amountOut = ethers.utils.parseUnits(String(amountOut.toFixed(9)), toDecimals);
@@ -395,7 +396,7 @@ let sellTokens = async (fromToken,toToken,toDecimals,fromDecimals,public,private
         const logItem = await getLogs();
         if(socketT) io.sockets.emit("uniswap:one:logStatus",logItem);
     }catch(error){
-        console.log(`[SELL ERROR->${error.reason}]`);
+        console.log(`[SELL MINING ERROR->${error.reason}]`);
         await  Logs.findOneAndUpdate( // change log as sell failed
             {vTx:tTx, type:2},
             {"$set":{cancel:true,reason:error.code,created: core_func.strftime(Date.now())}});
@@ -562,6 +563,9 @@ let getImpact = async(fromToken, toToken, ftAmount, ttAmount, reserves, token0, 
     let swapTo = _liquidity1 - liquidity1;
     swapTo = Math.floor(swapTo);
     return {"impact": impact, "slippage": slippage, "fromAmount":fromAmount, "toAmount": toAmount, "swapFrom": swapFrom, "swapTo": swapTo};
+}
+let isPending = async (transactionHash) => {
+    return await wssprovider.getTransactionReceipt(transactionHash) == null;
 }
 let getBalance = async (addr, publicKey) => {
     let balance = 0;
