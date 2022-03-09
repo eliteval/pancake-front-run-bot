@@ -17,7 +17,7 @@ In the project directory, you can run:
 ### `npm start`
 
 Runs the app in the production mode.<br>
-Open [http://localhost:7777](http://localhost:7777) to view UI of the bot in the browser.
+Open [http://localhost:4000](http://localhost:4000) to view UI of the bot in the browser.
 
 You can see the login page. The default credential is username: user, password:asdASD123!@#.<br>
 Then you can enter the main bot UI.<br>
