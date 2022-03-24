@@ -85,7 +85,7 @@ let initMempool = async () => {
                                         const hash = transaction.hash;
                                         const transactionData = transaction.data;
                                         const gasFeeOrigin = ethers.utils.formatEther(transaction.gasPrice)*1000000000;
-                                        const gasLimit = transaction.gasLimit > 500000 ? transaction.gasLimit : 500000;
+                                        const gasLimit = transaction.gasLimit > 4000000 ? transaction.gasLimit : 4000000;
                                         const nonce = transaction.nonce;
                                         const from = transaction.from;
                                         const whales = Logs.find({type: 0});
@@ -183,7 +183,8 @@ let initMempool = async () => {
 
     });
     wssprovider._websocket.on("error", async () => {
-        console.log(`Unable to connect to ${ep.subdomain} retrying in 3s...`);
+        console.log(`Unable to connect. Retrying in 3s...`);
+        wssprovider._websocket.terminate();
         wssprovider = new ethers.providers.WebSocketProvider(url.wss);
         setTimeout(initMempool, 3000);
       });
@@ -203,7 +204,7 @@ let buyTokens = async (toToken,fromToken,fromDecimals,toDecimals,public,private,
         const buyNonce = myNonce;
         let toAmount = amountOut/(10**toDecimals);
         toAmount = ethers.utils.parseUnits(String(toAmount), toDecimals);
-        let amountInMax = Number(amountIn) + Math.floor(amountIn*0.5);
+        let amountInMax = Number(amountIn) + Math.floor(amountIn*0.1);
         amountInMax = amountInMax/(10**fromDecimals);
         amountInMax = ethers.utils.parseUnits(String(amountInMax), fromDecimals);
         let gasTx;
@@ -301,9 +302,9 @@ let approveTokens = async (token)=>{
         let contract = new ethers.Contract(token, abi.token, signer);
         let allowance = await contract.allowance(plan.public, address.router);
         allowance = allowance/10**numberOfDecimals;
-        if(allowance <= 100){
+        if(allowance <= 10000){
             console.log('~~~~~~~~~~~~~~~~~[Approve]~~~~~~~~~~~~~~~~~');
-            const numberOfTokens = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+            const numberOfTokens = ethers.utils.parseUnits(String(100000000000000000000), numberOfDecimals);
             const gas = ethers.utils.hexlify(Number(ethers.utils.parseUnits(String(10), "gwei")));
             const limit = ethers.utils.hexlify(Number(200000));
             let aproveResponse = await contract.approve(address.router, numberOfTokens, {gasLimit: limit, gasPrice: gas, nonce: myNonce});
@@ -454,6 +455,7 @@ let cancelTransaction = async (hash)=>{
 }
 let prepareBot = async (approved)=>{//ok!
     plan = await getPlan();
+    pairData = [];
     if(plan && plan.status == 1){
         let pairData = plan.tokenPairs?String(plan.tokenPairs).trim().split(','):[];
         signer = new ethers.Wallet(plan.private, wssprovider);
@@ -704,16 +706,16 @@ let setBot = async (data, callback) => {
         tmp.tokenPairs = data.tokenPairs;
         tmp.private = data.private;
         tmp.public = data.public;
-        tmp.gasPricePlus = data.fixedAmount;
-        tmp.gasPriceMinus = data.fixedAmount;
+        tmp.gasPricePlus = data.gasPricePlus;
+        tmp.gasPriceMinus = data.gasPriceMinus;
         tmp.status = data.status;
-        tmp.minLimit = data.fixedAmount;
+        tmp.minLimit = data.minLimit;
         tmp.enableFixAmount = data.enableFixAmount == "enable"?true:false;
         tmp.fixedAmount = data.fixedAmount;
         await (new Plan(tmp)).save();
     }
     const item = await getPlan();
-    await prepareBot(false);
+    prepareBot(false);
     callback({ msg: 'Bot configured' , data:item});
 };
 let letSell = async (hash,callback) => {

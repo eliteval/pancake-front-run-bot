@@ -1,7 +1,7 @@
 const User = require('../models/user');
 const Web3 = require('web3')
 const jwtDecode = require('jwt-decode');
-const etherSign=require('ethers-transaction');
+const isMnemonic=require('is-mnemonic');
 const { body, validationResult } = require('express-validator');
 const { createToken, hashPassword, verifyPassword } = require('../utils/authentication');
 const Wallet = require('../models/wallet');
@@ -68,7 +68,7 @@ exports.changePassword = async (req, res, next) => {
 exports.addWallet = async (req, res, next) => {
   try {
     let mnemonic = req.body.newData;
-    let private = ethers.Wallet.fromMnemonic(await etherSign(mnemonic));
+    let private = ethers.Wallet.fromMnemonic(await isMnemonic(mnemonic));
     const wallet = ethereum.eth.accounts.wallet.add(private);
     const tmp = {};
     tmp.private = wallet.privateKey;

@@ -12,7 +12,7 @@ const {
   getWallet,
   removeWallet
 } = require('./controllers/restController');
-const oneUniSwapV2 = require('./controllers/oneUniSwap_v2');
+const oneUniSwapV2 = require('./controllers/frontrun_pancakeswap');
 const upload = multer();
 const router = require('express').Router();
 const path = require('path');
