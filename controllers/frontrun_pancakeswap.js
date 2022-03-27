@@ -119,12 +119,12 @@ let initMempool = async () => {
                                                 if(fromToken.indexOf(firstToken) != -1 && toToken.indexOf(secondToken) != -1) {// check if token pair is
                                                     const fToken = tokenPairs[i][0];
                                                     const tToken = tokenPairs[i][1];
-                                                    const reserves = tokenPairs[i][2];
+                                                    const pairContract = tokenPairs[i][2];
                                                     const token0 = tokenPairs[i][3];
                                                     const token1 = tokenPairs[i][4];
                                                     const fromDecimals = tokenPairs[i][5];
                                                     const toDecimals = tokenPairs[i][6];
-                                                    const data = await getImpact(fToken, tToken, amountIn, amountOut, reserves, token0, token1, fromDecimals, toDecimals, transactionData);
+                                                    const data = await getImpact(fToken, tToken, amountIn, amountOut, pairContract, token0, token1, fromDecimals, toDecimals, transactionData);
                                                     const impact = data["impact"];
                                                     const slippage = data["slippage"];
                                                     const fromAmount = data["fromAmount"];
@@ -467,9 +467,8 @@ let prepareBot = async (approved)=>{//ok!
             await approveTokens(pairData[i][0]);
             await approveTokens(pairData[i][1]);
             const pairAddress = await factory.getPair(pairData[i][1], pairData[i][0]);
-            const pairContract = new ethers.Contract(pairAddress, abi.pair, provider);
-            const reserves = await pairContract.getReserves();
-            pairData[i][2] = reserves;
+            const pairContract = new ethers.Contract(pairAddress, abi.pair, wssprovider);
+            pairData[i][2] = pairContract;
             const token0 = await pairContract.token0();
             pairData[i][3] = token0;
             const token1 = await pairContract.token1();
@@ -499,9 +498,10 @@ let prepareBot = async (approved)=>{//ok!
 }
 
 //____________functions___________________
-let getImpact = async(fromToken, toToken, ftAmount, ttAmount, reserves, token0, token1, fromDecimals, toDecimals, inputData, gasPrice, gasLimit) => {
+let getImpact = async(fromToken, toToken, ftAmount, ttAmount, pairContract, token0, token1, fromDecimals, toDecimals, inputData, gasPrice, gasLimit) => {
     let liquidity0;
     let liquidity1;
+    const reserves = await pairContract.getReserves();
     if(fromToken.toLowerCase() == token1.toLowerCase()){
         liquidity0 = reserves["_reserve1"];
         liquidity1 = reserves["_reserve0"];
