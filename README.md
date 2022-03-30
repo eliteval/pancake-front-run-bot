@@ -26,3 +26,8 @@ There are 3 pages.<br>
 Change password page, wallet page and bot page.<br>
 In wallet page you add your wallet.<br>
 And in bot page you set your bot plan and can see the logs of bot activity.
+
+If you need more information or updating as your needs, please contact me.
+My email is vladimir9255@outlook.com
+And skype is live:.cid.2c042ba156f204d8
+Thanks.
